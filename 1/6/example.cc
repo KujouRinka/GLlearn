@@ -1,0 +1,164 @@
+#include <iostream>
+#include <numbers>
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+#include "shader.hh"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+float vertices[] = {
+  // ---- pos ----  ---- color - - texture coordinate -
+  0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,   // ru
+  0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,  // rd
+  -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // ld
+  -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f   // lu
+};
+
+GLuint indices[] = {
+  0, 1, 3,
+  1, 2, 3
+};
+
+const char *fragmentShaderYellowSource =
+  "#version 330 core\n"
+  "out vec4 FragColor;\n"
+  "void main() {\n"
+  "    FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"
+  "}\n\0";
+
+int w = 600;
+int h = 600;
+
+void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+  w = width;
+  h = height;
+  glViewport(0, 0, width, height);
+}
+
+void processInput(GLFWwindow *window) {
+  if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+    glfwSetWindowShouldClose(window, true);
+  }
+}
+
+int main() {
+  glfwInit();
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+  GLFWwindow *window =
+    glfwCreateWindow(w, h, "LearnOpenGL", nullptr, nullptr);
+  if (window == nullptr) {
+    std::cout << "Failed to create GLFW window" << std::endl;
+    glfwTerminate();
+    return -1;
+  }
+
+  glfwMakeContextCurrent(window);
+  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+  if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+    std::cout << "Failed to initialize GLAD" << std::endl;
+    return -1;
+  }
+
+  Shader ourShader("./vert_shader.vert", "./frag_shader.frag");
+
+  GLint width, height, nrChannels;
+  unsigned char *data = stbi_load(
+    "./assets/container.jpg",
+    &width, &height, &nrChannels, 0
+  );
+  if (!data) {
+    std::cout << "Failed to load texture" << std::endl;
+    return -1;
+  }
+  GLuint texture, texture1;
+  glGenTextures(1, &texture);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  stbi_image_free(data);
+
+  stbi_set_flip_vertically_on_load(true);
+  data = stbi_load(
+    "./assets/awesomeface.png",
+    &width, &height, &nrChannels, 0
+  );
+  if (!data) {
+    std::cout << "Failed to load texture1" << std::endl;
+    return -1;
+  }
+  glGenTextures(1, &texture1);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, texture1);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  stbi_image_free(data);
+
+  GLuint VAO, VBO, EBO;
+  glGenVertexArrays(1, &VAO);
+  glGenBuffers(1, &VBO);
+  glGenBuffers(1, &EBO);
+
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+
+  glBindVertexArray(VAO);
+  // loc
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 8, (void *) 0);
+  // color
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 8, (void *) (sizeof(GLfloat) * 3));
+  // texture
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 8, (void *) (sizeof(GLfloat) * 6));
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+  glEnableVertexAttribArray(2);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+  while (!glfwWindowShouldClose(window)) {
+    processInput(window);
+
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    ourShader.use();
+    ourShader.setInt("texture0", 0);
+    ourShader.setInt("texture1", 1);
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+    // glfwWaitEvents();
+  }
+  glDeleteBuffers(1, &VBO);
+  glDeleteVertexArrays(1, &VAO);
+  glDeleteTextures(1, &texture);
+  glDeleteTextures(1, &texture1);
+
+  glfwTerminate();
+
+  return 0;
+}
