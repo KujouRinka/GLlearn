@@ -8,7 +8,13 @@ out vec4 FragColor;
 uniform sampler2D texture0;
 uniform sampler2D texture1;
 
+uniform bool right;
+uniform float altAlpha;
+
 void main() {
-    // FragColor = mix(texture(texture0, TexCoord), texture(texture1, TexCoord), 0.2) * vec4(ourColor, 1.0f);
-    FragColor = mix(texture(texture0, TexCoord), texture(texture1, vec2(1 - TexCoord.x, TexCoord.y)), 0.2) * vec4(ourColor, 1.0f);
+    if (right) {
+        FragColor = mix(texture(texture0, TexCoord), texture(texture1, vec2(1 - TexCoord.x, TexCoord.y)), altAlpha) * vec4(ourColor, 1.0f);
+    } else {
+        FragColor = mix(texture(texture0, TexCoord), texture(texture1, TexCoord), altAlpha) * vec4(ourColor, 1.0f);
+    }
 }
